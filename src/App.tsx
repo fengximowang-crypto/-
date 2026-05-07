@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import type { Player, Match, PlayerMatchStats, NavTab } from './types'
-import { storage, seedDemoData, computePlayerRating } from './utils'
+import { seedDemoData, computePlayerRating } from './utils'
+import * as db from './lib/database'
 import type { AuthUser } from './pages/LoginPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import PlayersPage from './pages/PlayersPage'
 import MatchesPage from './pages/MatchesPage'
-import { LayoutDashboard, Users, Calendar, LogOut } from 'lucide-react'
-import StorageIndicator from './components/StorageIndicator'
+import { LayoutDashboard, Users, Calendar, LogOut, Cloud, CloudOff } from 'lucide-react'
+import { supabase } from './lib/supabase'
 
 const AUTH_KEY = 'goat-fc-auth'
 
@@ -30,25 +31,60 @@ export default function App() {
   const [stats, setStats] = useState<PlayerMatchStats[]>([])
   const [tab, setTab] = useState<NavTab>('dashboard')
   const [loaded, setLoaded] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [online, setOnline] = useState(navigator.onLine)
 
   const isAdmin = currentUser?.role === 'admin'
 
+  // Listen for online/offline events
   useEffect(() => {
-    const state = storage.getState()
-    if (state.players.length === 0 && state.matches.length === 0) {
-      const demo = seedDemoData()
-      setPlayers(demo.players)
-      setMatches(demo.matches)
-      setStats(demo.playerMatchStats)
-      storage.savePlayers(demo.players)
-      storage.saveMatches(demo.matches)
-      storage.saveStats(demo.playerMatchStats)
-    } else {
-      setPlayers(state.players)
-      setMatches(state.matches)
-      setStats(state.playerMatchStats)
+    const handleOnline = () => setOnline(true)
+    const handleOffline = () => setOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
-    setLoaded(true)
+  }, [])
+
+  // Load data from Supabase
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [cloudPlayers, cloudMatches, cloudStats] = await Promise.all([
+          db.fetchPlayers(),
+          db.fetchMatches(),
+          db.fetchPlayerMatchStats(),
+        ])
+
+        // If cloud is empty, seed demo data
+        if (cloudPlayers.length === 0 && cloudMatches.length === 0) {
+          const demo = seedDemoData()
+          await db.syncLocalToCloud(demo.players, demo.matches, demo.playerMatchStats)
+          setPlayers(demo.players)
+          setMatches(demo.matches)
+          setStats(demo.playerMatchStats)
+        } else {
+          setPlayers(cloudPlayers)
+          setMatches(cloudMatches)
+          setStats(cloudStats)
+        }
+      } catch (err) {
+        console.error('Failed to load from cloud:', err)
+        // Fallback to localStorage
+        const state = {
+          players: JSON.parse(localStorage.getItem('goat-players') || '[]'),
+          matches: JSON.parse(localStorage.getItem('goat-matches') || '[]'),
+          playerMatchStats: JSON.parse(localStorage.getItem('goat-player-match-stats') || '[]'),
+        }
+        setPlayers(state.players)
+        setMatches(state.matches)
+        setStats(state.playerMatchStats)
+      }
+      setLoaded(true)
+    }
+    loadData()
   }, [])
 
   const handleLogin = (user: AuthUser) => {
@@ -61,57 +97,104 @@ export default function App() {
     setCurrentUser(null)
   }
 
-  const savePlayer = (p: Player) => {
-    const next = players.find(x => x.id === p.id)
-      ? players.map(x => x.id === p.id ? p : x)
-      : [...players, p]
-    setPlayers(next)
+  const savePlayer = async (p: Player) => {
+    setSyncing(true)
     try {
-      storage.savePlayers(next)
+      const next = players.find(x => x.id === p.id)
+        ? players.map(x => x.id === p.id ? p : x)
+        : [...players, p]
+      setPlayers(next)
+
+      if (players.find(x => x.id === p.id)) {
+        await db.updatePlayer(p)
+      } else {
+        await db.createPlayer(p)
+      }
     } catch (err) {
-      console.error('Storage save failed:', err)
-      alert('存储空间不足！请尝试移除部分球员头像或联系开发者。')
+      console.error('Save player failed:', err)
+      // Fallback to localStorage
+      const next = players.find(x => x.id === p.id)
+        ? players.map(x => x.id === p.id ? p : x)
+        : [...players, p]
+      localStorage.setItem('goat-players', JSON.stringify(next))
     }
+    setSyncing(false)
   }
 
-  const deletePlayer = (id: string) => {
-    const next = players.filter(p => p.id !== id)
-    setPlayers(next)
-    storage.savePlayers(next)
-    const nextStats = stats.filter(s => s.playerId !== id)
-    setStats(nextStats)
-    storage.saveStats(nextStats)
+  const deletePlayer = async (id: string) => {
+    setSyncing(true)
+    try {
+      const next = players.filter(p => p.id !== id)
+      setPlayers(next)
+      await db.deletePlayer(id)
+      const nextStats = stats.filter(s => s.playerId !== id)
+      setStats(nextStats)
+    } catch (err) {
+      console.error('Delete player failed:', err)
+      const next = players.filter(p => p.id !== id)
+      localStorage.setItem('goat-players', JSON.stringify(next))
+    }
+    setSyncing(false)
   }
 
-  const saveMatch = (m: Match, newStats: PlayerMatchStats[]) => {
-    const nextMatches = matches.find(x => x.id === m.id)
-      ? matches.map(x => x.id === m.id ? m : x)
-      : [...matches, m]
-    setMatches(nextMatches)
-    storage.saveMatches(nextMatches)
+  const saveMatch = async (m: Match, newStats: PlayerMatchStats[]) => {
+    setSyncing(true)
+    try {
+      const nextMatches = matches.find(x => x.id === m.id)
+        ? matches.map(x => x.id === m.id ? m : x)
+        : [...matches, m]
+      setMatches(nextMatches)
 
-    const filtered = stats.filter(s => s.matchId !== m.id)
-    const nextStats = [...filtered, ...newStats]
-    setStats(nextStats)
-    storage.saveStats(nextStats)
+      if (matches.find(x => x.id === m.id)) {
+        await db.updateMatch(m)
+      } else {
+        await db.createMatch(m)
+      }
 
-    const updatedPlayers = players.map(p => {
-      const playerMatchStat = newStats.find(s => s.playerId === p.id)
-      if (!playerMatchStat) return p
-      const newAttrs = computePlayerRating(p, [...stats, ...newStats])
-      return { ...p, attributes: newAttrs, updatedAt: new Date().toISOString() }
-    })
-    setPlayers(updatedPlayers)
-    storage.savePlayers(updatedPlayers)
+      const filtered = stats.filter(s => s.matchId !== m.id)
+      const nextStats = [...filtered, ...newStats]
+      setStats(nextStats)
+
+      // Save player match stats
+      for (const stat of newStats) {
+        await db.createPlayerMatchStats(stat)
+      }
+
+      // Update player attributes based on new stats
+      const updatedPlayers = players.map(p => {
+        const playerMatchStat = newStats.find(s => s.playerId === p.id)
+        if (!playerMatchStat) return p
+        const newAttrs = computePlayerRating(p, [...stats, ...newStats])
+        return { ...p, attributes: newAttrs, updatedAt: new Date().toISOString() }
+      })
+      setPlayers(updatedPlayers)
+      for (const p of updatedPlayers) {
+        await db.updatePlayer(p)
+      }
+    } catch (err) {
+      console.error('Save match failed:', err)
+      const nextMatches = matches.find(x => x.id === m.id)
+        ? matches.map(x => x.id === m.id ? m : x)
+        : [...matches, m]
+      localStorage.setItem('goat-matches', JSON.stringify(nextMatches))
+    }
+    setSyncing(false)
   }
 
-  const deleteMatch = (id: string) => {
-    const nextMatches = matches.filter(m => m.id !== id)
-    setMatches(nextMatches)
-    storage.saveMatches(nextMatches)
-    const nextStats = stats.filter(s => s.matchId !== id)
-    setStats(nextStats)
-    storage.saveStats(nextStats)
+  const deleteMatch = async (id: string) => {
+    setSyncing(true)
+    try {
+      const nextMatches = matches.filter(m => m.id !== id)
+      setMatches(nextMatches)
+      await db.deleteMatch(id)
+      const nextStats = stats.filter(s => s.matchId !== id)
+      setStats(nextStats)
+    } catch (err) {
+      console.error('Delete match failed:', err)
+      const nextMatches = matches.filter(m => m.id !== id)
+      localStorage.setItem('goat-matches', JSON.stringify(nextMatches))
+    }
+    setSyncing(false)
   }
 
   if (!loaded) return (
@@ -189,6 +272,19 @@ export default function App() {
             })}
           </div>
 
+          {/* Sync status */}
+          {syncing && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 10px', borderRadius: 8,
+              background: '#f59e0b15', border: '1px solid #f59e0b30',
+              fontSize: 10, color: '#f59e0b', fontWeight: 600,
+            }}>
+              <div style={{ width: 12, height: 12, border: '2px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              同步中...
+            </div>
+          )}
+
           {/* Season badge */}
           <div style={{ fontSize: 10, color: '#444', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: 16, flexShrink: 0 }}>
             赛季 2025-26
@@ -244,11 +340,18 @@ export default function App() {
 
       {/* Footer */}
       <footer style={{ borderTop: '1px solid #1a1a1a', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 10, color: '#2a2a2a', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          GOAT FC Manager · 数据存储于本地浏览器 · 无需联网
+        <div style={{ fontSize: 10, color: '#2a2a2a', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {online ? <Cloud size={12} /> : <CloudOff size={12} />}
+          数据存储于云端 · {online ? '已同步' : '离线模式'}
         </div>
-        <StorageIndicator />
       </footer>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
