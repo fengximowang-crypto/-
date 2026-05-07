@@ -109,3 +109,122 @@ select option {
   background: #222222;
   color: #f0f0f0;
 }
+
+/* ─── Responsive Styles ──────────────────────────────────────────────────── */
+
+/* Mobile-first base */
+@media (max-width: 768px) {
+  /* Touch-friendly tap targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove tap highlight on iOS */
+  button, a, input, select {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Prevent text selection on UI elements */
+  nav, footer, .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Bottom navigation for mobile */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+  .desktop-top-nav {
+    display: none !important;
+  }
+  .mobile-nav-spacer {
+    display: block !important;
+  }
+  .main-content {
+    padding-bottom: 80px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  .desktop-top-nav {
+    display: flex !important;
+  }
+  .mobile-nav-spacer {
+    display: none !important;
+  }
+}
+
+/* Responsive grids */
+@media (max-width: 768px) {
+  .grid-auto-fill {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-three-col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .grid-auto-fill {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+  }
+}
+
+/* Responsive text */
+@media (max-width: 768px) {
+  .mobile-text-sm {
+    font-size: 12px !important;
+  }
+  .mobile-text-base {
+    font-size: 14px !important;
+  }
+  .mobile-text-lg {
+    font-size: 16px !important;
+  }
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding: max(0px)) {
+  .mobile-bottom-nav {
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Spin animation for sync */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Modal on mobile: full screen */
+@media (max-width: 768px) {
+  .mobile-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    z-index: 100 !important;
+    overflow-y: auto !important;
+  }
+}

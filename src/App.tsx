@@ -7,8 +7,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import PlayersPage from './pages/PlayersPage'
 import MatchesPage from './pages/MatchesPage'
-import { LayoutDashboard, Users, Calendar, LogOut, Cloud, CloudOff } from 'lucide-react'
-import { supabase } from './lib/supabase'
+import { LayoutDashboard, Users, Calendar, LogOut, Cloud, CloudOff, Home, UserPlus, ClipboardList } from 'lucide-react'
 
 const AUTH_KEY = 'goat-fc-auth'
 
@@ -211,15 +210,15 @@ export default function App() {
   }
 
   const navItems: { id: NavTab; label: string; Icon: any; count?: number }[] = [
-    { id: 'dashboard', label: '数据中心', Icon: LayoutDashboard },
-    { id: 'players', label: '球员管理', Icon: Users, count: players.length },
-    { id: 'matches', label: '比赛记录', Icon: Calendar, count: matches.length },
+    { id: 'dashboard', label: '首页', Icon: LayoutDashboard },
+    { id: 'players', label: '球员', Icon: Users, count: players.length },
+    { id: 'matches', label: '比赛', Icon: Calendar, count: matches.length },
   ]
 
   return (
     <div style={{ minHeight: '100vh', background: '#111111', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Nav */}
-      <nav style={{
+      {/* Desktop Top Nav */}
+      <nav className="desktop-top-nav" style={{
         background: '#0d0d0d',
         borderBottom: '1px solid #1e1e1e',
         position: 'sticky', top: 0, zIndex: 40,
@@ -280,7 +279,7 @@ export default function App() {
               background: '#f59e0b15', border: '1px solid #f59e0b30',
               fontSize: 10, color: '#f59e0b', fontWeight: 600,
             }}>
-              <div style={{ width: 12, height: 12, border: '2px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div className="spin" style={{ width: 12, height: 12, border: '2px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%' }} />
               同步中...
             </div>
           )}
@@ -332,26 +331,73 @@ export default function App() {
       </nav>
 
       {/* Page content */}
-      <main style={{ flex: 1 }}>
+      <main className="main-content" style={{ flex: 1, padding: '16px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
         {tab === 'dashboard' && <DashboardPage players={players} matches={matches} stats={stats} />}
         {tab === 'players' && <PlayersPage players={players} stats={stats} matches={matches} onSave={savePlayer} onDelete={deletePlayer} isAdmin={isAdmin} />}
         {tab === 'matches' && <MatchesPage matches={matches} players={players} stats={stats} onSaveMatch={saveMatch} onDeleteMatch={deleteMatch} isAdmin={isAdmin} />}
       </main>
 
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid #1a1a1a', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav" style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: '#0d0d0d',
+        borderTop: '1px solid #1e1e1e',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        padding: '8px 0', zIndex: 50,
+        paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+      }}>
+        {navItems.map(({ id, label, Icon, count }) => {
+          const active = tab === id
+          return (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                padding: '8px 20px', border: 'none', cursor: 'pointer',
+                background: active ? '#F7FF1915' : 'transparent',
+                color: active ? '#F7FF19' : '#555',
+                fontSize: 10, fontWeight: active ? 700 : 600,
+                borderRadius: 12, transition: 'all 0.15s',
+                minWidth: 70,
+              }}
+            >
+              <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+              <span style={{ letterSpacing: '0.02em' }}>{label}</span>
+              {count !== undefined && count > 0 && (
+                <span style={{
+                  position: 'absolute', top: 4, right: '15%',
+                  fontSize: 9, fontWeight: 800,
+                  padding: '1px 5px', borderRadius: 8,
+                  background: '#F7FF19', color: '#000',
+                }}>{count}</span>
+              )}
+            </button>
+          )
+        })}
+        
+        {/* User profile button */}
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '8px 20px', border: 'none', cursor: 'pointer',
+            background: 'transparent', color: '#555',
+            fontSize: 10, fontWeight: 600, borderRadius: 12,
+          }}
+        >
+          <LogOut size={22} strokeWidth={2} />
+          <span>退出</span>
+        </button>
+      </nav>
+
+      {/* Footer - desktop only */}
+      <footer className="mobile-hide" style={{ borderTop: '1px solid #1a1a1a', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: 10, color: '#2a2a2a', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
           {online ? <Cloud size={12} /> : <CloudOff size={12} />}
           数据存储于云端 · {online ? '已同步' : '离线模式'}
         </div>
       </footer>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }

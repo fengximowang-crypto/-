@@ -76,7 +76,7 @@ export default function DashboardPage({ players, matches, stats }: DashboardProp
       </div>
 
       {/* Team overview cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div className="grid-auto-fill" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard label="总场次" value={totalMatches} sub={`胜${wins} 平${draws} 负${losses}`} />
         <StatCard label="胜率" value={`${winRate}%`} sub="本赛季" color={Number(winRate) >= 60 ? '#22c55e' : Number(winRate) >= 40 ? '#f59e0b' : '#ef4444'} />
         <StatCard label="进球" value={totalGoals} sub={`场均 ${avgGoals}`} color="#22c55e" />
@@ -85,7 +85,7 @@ export default function DashboardPage({ players, matches, stats }: DashboardProp
       </div>
 
       {/* Main grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="grid-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         {/* Player Leaderboard */}
         <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, padding: '16px', overflow: 'hidden' }}>
           <div style={{ fontSize: 11, color: '#F7FF19', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>🏆 球员总评榜</div>
@@ -152,7 +152,7 @@ export default function DashboardPage({ players, matches, stats }: DashboardProp
                     { label: '体能', value: bestPlayer.attrs.stamina },
                     { label: '意识', value: Math.round((bestPlayer.attrs.positioning + bestPlayer.attrs.decisions + bestPlayer.attrs.vision + bestPlayer.attrs.anticipation) / 4) },
                   ]}
-                  size={180}
+                  size={Math.min(180, (typeof window !== 'undefined' ? window.innerWidth : 400) - 80)}
                   color="#F7FF19"
                 />
               </div>
@@ -164,7 +164,7 @@ export default function DashboardPage({ players, matches, stats }: DashboardProp
       </div>
 
       {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+      <div className="grid-three-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
         {/* Top scorers */}
         <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, padding: '16px' }}>
           <div style={{ fontSize: 11, color: '#F7FF19', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>⚽ 射手榜</div>
