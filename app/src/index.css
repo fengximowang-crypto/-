@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #F7FF19;
+  --color-brand-dim: #c8cf00;
+  --color-bg-base: #111111;
+  --color-bg-card: #1a1a1a;
+  --color-bg-elevated: #222222;
+  --color-bg-hover: #2a2a2a;
+  --color-border: #333333;
+  --color-border-bright: #444444;
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #999999;
+  --color-text-muted: #555555;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-gk: #f59e0b;
+  --color-def: #3b82f6;
+  --color-mid: #22c55e;
+  --color-fwd: #ef4444;
+  --font-display: "Inter", "Helvetica Neue", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: #111111;
+  color: #f0f0f0;
+  font-family: "Inter", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+
+/* Player Card Flip */
+.card-3d { perspective: 1000px; }
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.card-inner.flipped { transform: rotateY(180deg); }
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face-back { transform: rotateY(180deg); }
+
+/* Glow effects */
+.glow-brand { box-shadow: 0 0 20px rgba(247, 255, 25, 0.3); }
+.glow-brand-sm { box-shadow: 0 0 10px rgba(247, 255, 25, 0.2); }
+
+/* Stat bar animation */
+@keyframes fill-bar {
+  from { width: 0; }
+  to { width: var(--target-width); }
+}
+.stat-bar-fill {
+  animation: fill-bar 0.8s ease-out forwards;
+}
+
+/* Fade in up */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
+
+/* Pulse brand */
+@keyframes pulse-brand {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(247, 255, 25, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(247, 255, 25, 0); }
+}
+
+.tab-active {
+  color: #F7FF19;
+  border-bottom: 2px solid #F7FF19;
+}
+
+input, select, textarea {
+  background-color: #222222 !important;
+  border: 1px solid #333333 !important;
+  color: #f0f0f0 !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #F7FF19 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #555555;
+}
+select option {
+  background: #222222;
+  color: #f0f0f0;
+}

@@ -1,0 +1,22 @@
+// Check localStorage usage
+const max = 5 * 1024 * 1024;
+let used = 0;
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  if (key) {
+    const val = localStorage.getItem(key);
+    used += (key.length + (val ? val.length : 0)) * 2;
+  }
+}
+console.log('localStorage used:', (used/1024/1024).toFixed(2), 'MB / 5 MB limit');
+console.log('Items:', localStorage.length);
+const players = JSON.parse(localStorage.getItem('goat-players') || '[]');
+console.log('Players count:', players.length);
+let avatarTotal = 0;
+players.forEach(p => {
+  const avatarSize = p.avatar ? Math.round(p.avatar.length * 2 / 1024) : 0;
+  avatarTotal += avatarSize;
+  console.log(p.name, '- avatar:', avatarSize, 'KB');
+});
+console.log('Total avatar:', avatarTotal, 'KB');
+console.log('Used/5MB:', (used/1024/1024).toFixed(2), 'MB');
